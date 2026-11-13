@@ -2,6 +2,9 @@
   "name": "my-gym-stats-mcp",
   "version": "1.0.0",
   "description": "MCP Server linked to a Google Sheet repository. The server gives the tool for search and analyze the data inside the Google Sheets. The user can performe query over those data usign his own LLM client, in my case ChatGpt",
+  "repository": {
+    "url": "https://github.com/CiccioTecchio/my-gym-stats-mcp"
+  },
   "keywords": [
     "mcp",
     "chatGpt",

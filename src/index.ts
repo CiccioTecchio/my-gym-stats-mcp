@@ -4,6 +4,7 @@ import { McpServer } from "@modelcontextprotocol/server";
 import { serveStdio } from "@modelcontextprotocol/server/stdio";
 
 import { registerListLogbookFilesTool } from "./tools/list-logbook-files.js";
+import { registerReadLogbookTools } from "./tools/read-logbook.js";
 
 function createServer(): McpServer {
   const server = new McpServer({
@@ -12,6 +13,7 @@ function createServer(): McpServer {
   });
 
   registerListLogbookFilesTool(server);
+  registerReadLogbookTools(server);
 
   return server;
 }

@@ -32,13 +32,39 @@ interface SpreadsheetValues {
 }
 
 export interface SheetsGateway {
+  /**
+   * Reads spreadsheet and worksheet metadata without loading grid data.
+   *
+   * @param spreadsheetId - Validated ID of the spreadsheet to inspect.
+   * @returns The spreadsheet title and ordered GRID worksheet titles.
+   * @throws Rejects with Google authentication, authorization, quota, network,
+   * or not-found errors returned by the Sheets API.
+   */
   getSpreadsheetMetadata(spreadsheetId: string): Promise<SpreadsheetMetadata>;
+
+  /**
+   * Reads multiple worksheet ranges in one Sheets API request.
+   *
+   * @param spreadsheetId - Validated ID of the spreadsheet to read.
+   * @param ranges - Server-generated and escaped A1 worksheet ranges.
+   * @returns Value ranges in the same order as the requested ranges.
+   * @throws Rejects with errors returned by the Sheets API.
+   */
   batchGetValues(
     spreadsheetId: string,
     ranges: string[],
   ): Promise<SpreadsheetValues>;
 }
 
+/**
+ * Creates the production Google Sheets adapter using Application Default
+ * Credentials and the read-only spreadsheets scope.
+ *
+ * @returns A gateway that can read spreadsheet metadata and values but cannot
+ * modify Google Sheets data.
+ * @remarks Calls made through the returned gateway reject with Google API
+ * authentication, authorization, quota, network, and validation errors.
+ */
 export function createGoogleSheetsGateway(): SheetsGateway {
   const googleAuth = new auth.GoogleAuth({
     scopes: [SPREADSHEETS_READONLY_SCOPE],
@@ -85,6 +111,23 @@ export function createGoogleSheetsGateway(): SheetsGateway {
   };
 }
 
+/**
+ * Reads every GRID worksheet from a spreadsheet discovered by the server.
+ *
+ * @param gateway - Sheets adapter used for metadata and value requests.
+ * @param spreadsheetId - Drive-discovered spreadsheet ID. It is never accepted
+ * directly from an MCP caller.
+ * @returns The spreadsheet title, ordered worksheets, normalized cell values,
+ * and total number of populated cells. A spreadsheet with no GRID worksheets
+ * returns an empty `worksheets` array and a zero cell count.
+ * @throws When `spreadsheetId` fails the strict ID allowlist, preventing unsafe
+ * or malformed identifiers from reaching Google APIs.
+ * @throws Propagates metadata and value-read errors from the gateway, including
+ * authentication, authorization, quota, network, and not-found failures.
+ * @security Worksheet names come only from Sheets metadata and are escaped
+ * before becoming A1 ranges. Values are normalized to JSON-safe primitive
+ * types, and the production gateway uses `spreadsheets.readonly`.
+ */
 export async function readSpreadsheet(
   gateway: SheetsGateway,
   spreadsheetId: string,
@@ -123,10 +166,25 @@ export async function readSpreadsheet(
   };
 }
 
+/**
+ * Converts a worksheet title into a quoted whole-sheet A1 range.
+ *
+ * @param title - Worksheet title returned by Google Sheets metadata.
+ * @returns A single-quoted A1 range with embedded apostrophes doubled.
+ * @security Escaping prevents a worksheet title from changing the intended A1
+ * range syntax.
+ */
 function toWholeWorksheetRange(title: string): string {
   return `'${title.replaceAll("'", "''")}'`;
 }
 
+/**
+ * Restricts an arbitrary API cell value to the MCP output schema.
+ *
+ * @param value - Raw value returned by the Sheets gateway.
+ * @returns `null`, a string, number, or boolean. Unexpected values are safely
+ * stringified instead of being returned as nested objects.
+ */
 function normalizeCellValue(value: unknown): CellValue {
   if (
     value === null ||

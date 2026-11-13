@@ -38,6 +38,21 @@ export interface LogbookGateways {
   sheets: SheetsGateway;
 }
 
+/**
+ * Reads the single monthly spreadsheet identified by a year and month.
+ *
+ * @param gateways - Restricted Drive and Sheets adapters.
+ * @param year - Four-digit year between 1900 and 2100.
+ * @param month - Calendar month between 1 and 12.
+ * @returns The matching spreadsheet with all of its worksheets and populated
+ * cell count.
+ * @throws When the year or month is not an integer in the accepted range.
+ * @throws When no valid spreadsheet exists for the requested period.
+ * @throws Propagates configuration, hierarchy-validation, duplicate-file,
+ * Google API, spreadsheet-ID, and response-size errors from lower layers.
+ * @security The caller selects only a logical year and month. File IDs, paths,
+ * URLs, and ranges are resolved from the server-confined logbook index.
+ */
 export async function readLogbookMonth(
   gateways: LogbookGateways,
   year: number,
@@ -56,6 +71,20 @@ export async function readLogbookMonth(
   return readIndexedFiles(gateways.sheets, [file]);
 }
 
+/**
+ * Reads every valid monthly spreadsheet for one logbook year.
+ *
+ * @param gateways - Restricted Drive and Sheets adapters.
+ * @param year - Four-digit year between 1900 and 2100.
+ * @returns All matching monthly spreadsheets ordered by month, together with
+ * aggregate spreadsheet and populated-cell counts.
+ * @throws When `year` is not an integer between 1900 and 2100.
+ * @throws When the validated logbook contains no spreadsheets for `year`.
+ * @throws Propagates configuration, hierarchy-validation, duplicate-file,
+ * Google API, spreadsheet-ID, and response-size errors from lower layers.
+ * @security Only the logical year is caller-controlled; the server discovers
+ * every file ID and range beneath the configured logbook root.
+ */
 export async function readLogbookYear(
   gateways: LogbookGateways,
   year: number,
@@ -71,6 +100,18 @@ export async function readLogbookYear(
   return readIndexedFiles(gateways.sheets, files);
 }
 
+/**
+ * Reads every valid monthly spreadsheet in the configured logbook.
+ *
+ * @param gateways - Restricted Drive and Sheets adapters.
+ * @returns All indexed spreadsheets ordered by year and month, plus aggregate
+ * spreadsheet and populated-cell counts.
+ * @throws When no valid monthly spreadsheets are found.
+ * @throws Propagates configuration, hierarchy-validation, duplicate-file,
+ * Google API, spreadsheet-ID, and response-size errors from lower layers.
+ * @security This function accepts no caller-supplied path, ID, URL, or range;
+ * traversal starts exclusively from the validated server-side root folder.
+ */
 export async function readEntireLogbook(
   gateways: LogbookGateways,
 ): Promise<LogbookReadResult> {
@@ -83,6 +124,19 @@ export async function readEntireLogbook(
   return readIndexedFiles(gateways.sheets, index);
 }
 
+/**
+ * Builds a unique, chronologically sorted index of valid logbook files.
+ *
+ * @param driveGateway - Restricted Drive adapter used for discovery.
+ * @returns Files whose names match `LogbookMM_YY` or `LogbookMM_YYYY` and whose
+ * filename year agrees with their validated `YYYY` parent folder.
+ * @throws When root configuration or Drive hierarchy validation fails.
+ * @throws When more than one valid spreadsheet maps to the same year and month,
+ * because the requested period would otherwise be ambiguous.
+ * @throws Propagates Drive API and traversal-limit errors.
+ * @security Invalid filenames and year mismatches are ignored; IDs originate
+ * only from parent-constrained discovery below the configured logbook root.
+ */
 async function getLogbookIndex(
   driveGateway: DriveGateway,
 ): Promise<IndexedLogbookFile[]> {
@@ -105,6 +159,13 @@ async function getLogbookIndex(
   return index;
 }
 
+/**
+ * Converts discovered Drive metadata into a logical logbook index entry.
+ *
+ * @param file - Spreadsheet metadata returned by restricted Drive traversal.
+ * @returns An indexed file when its name and parent year agree, otherwise
+ * `null` so unrelated or misplaced spreadsheets are excluded.
+ */
 function toIndexedLogbookFile(
   file: DriveFileMetadata,
 ): IndexedLogbookFile | null {
@@ -127,6 +188,20 @@ function toIndexedLogbookFile(
   };
 }
 
+/**
+ * Reads a trusted list of indexed spreadsheets with bounded concurrency.
+ *
+ * @param sheetsGateway - Restricted Sheets adapter used to read each file.
+ * @param files - Internally discovered and validated logbook index entries.
+ * @returns Spreadsheet data and aggregate counts in the same order as `files`.
+ * @throws When the result exceeds `MAX_TOTAL_CELLS`, limiting response size and
+ * the amount of data exposed to the MCP client.
+ * @throws When serialized output exceeds `MAX_RESULT_CHARACTERS`, limiting
+ * memory use and oversized MCP responses.
+ * @throws Propagates Sheets API and spreadsheet-ID errors from any worker.
+ * @security Reads are capped at `READ_CONCURRENCY`; callers cannot inject file
+ * IDs, and both cell and serialized response sizes are bounded.
+ */
 async function readIndexedFiles(
   sheetsGateway: SheetsGateway,
   files: IndexedLogbookFile[],
@@ -169,6 +244,19 @@ async function readIndexedFiles(
   return result;
 }
 
+/**
+ * Maps items concurrently while preserving their original order.
+ *
+ * @typeParam T - Input item type.
+ * @typeParam R - Mapped result type.
+ * @param items - Items to process.
+ * @param concurrency - Maximum number of active workers. Callers provide a
+ * positive, bounded constant.
+ * @param mapper - Asynchronous transformation applied once to each item.
+ * @returns Results aligned with the input order.
+ * @throws Rejects with the first error raised by `mapper`; remaining workers
+ * may already have in-flight operations when that rejection occurs.
+ */
 async function mapWithConcurrency<T, R>(
   items: T[],
   concurrency: number,
@@ -196,12 +284,27 @@ async function mapWithConcurrency<T, R>(
   return results;
 }
 
+/**
+ * Validates a caller-selected logbook year.
+ *
+ * @param year - Candidate year.
+ * @throws When the value is not an integer between 1900 and 2100, preventing
+ * nonsensical or excessively broad logical lookups.
+ */
 function validateYear(year: number): void {
   if (!Number.isInteger(year) || year < 1900 || year > 2100) {
     throw new Error("Year must be an integer between 1900 and 2100.");
   }
 }
 
+/**
+ * Validates a caller-selected logbook year and calendar month.
+ *
+ * @param year - Candidate four-digit year.
+ * @param month - Candidate month number.
+ * @throws When the year is invalid according to `validateYear`.
+ * @throws When the month is not an integer between 1 and 12.
+ */
 function validateYearAndMonth(year: number, month: number): void {
   validateYear(year);
   if (!Number.isInteger(month) || month < 1 || month > 12) {
@@ -209,6 +312,12 @@ function validateYearAndMonth(year: number, month: number): void {
   }
 }
 
+/**
+ * Formats a validated month for filenames, keys, and user-facing messages.
+ *
+ * @param month - Calendar month number.
+ * @returns The month left-padded to two characters.
+ */
 function padMonth(month: number): string {
   return String(month).padStart(2, "0");
 }

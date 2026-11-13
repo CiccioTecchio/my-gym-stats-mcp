@@ -42,6 +42,23 @@ const toolAnnotations = {
   openWorldHint: true,
 } as const;
 
+/**
+ * Registers the three read-only logbook content tools on an MCP server.
+ *
+ * @param server - MCP server that will expose `read_logbook_month`,
+ * `read_logbook_year`, and `read_entire_logbook`.
+ * @returns Nothing. The function mutates the server's tool registry.
+ * @remarks Month input is a strict `{ year, month }` object, year input is a
+ * strict `{ year }` object, and the full-logbook tool accepts a strict empty
+ * object. Successful calls return a short text summary plus structured
+ * `LogbookReadResult` data. Zod rejects malformed MCP input before a handler is
+ * invoked; operational errors are converted by `executeRead` to `isError` MCP
+ * results instead of being propagated to the client.
+ * @security Callers can select only a validated logical period. They cannot
+ * provide paths, Drive IDs, spreadsheet IDs, URLs, queries, worksheet names, or
+ * ranges. The underlying gateways are read-only, discovery is confined to the
+ * configured logbook hierarchy, and lower layers enforce response-size limits.
+ */
 export function registerReadLogbookTools(server: McpServer): void {
   const gateways: LogbookGateways = {
     drive: createGoogleDriveGateway(),
@@ -111,6 +128,18 @@ export function registerReadLogbookTools(server: McpServer): void {
   );
 }
 
+/**
+ * Executes a logbook read and converts its outcome into an MCP tool result.
+ *
+ * @param read - Deferred month, year, or complete-logbook read operation.
+ * @param scopeDescription - Server-generated label used in the response and
+ * diagnostic log; it must not contain untrusted secrets.
+ * @returns A successful MCP result containing a text summary and structured
+ * logbook data, or an `isError: true` result with a generic remediation message.
+ * @remarks All exceptions from `read` are caught. Detailed Google and internal
+ * errors are written only to the server log so credentials, IDs, and backend
+ * implementation details are not deliberately returned to the model.
+ */
 async function executeRead(
   read: () => Promise<LogbookReadResult>,
   scopeDescription: string,

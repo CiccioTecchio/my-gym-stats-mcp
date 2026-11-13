@@ -6,6 +6,8 @@ The logbook is stored in Google Drive as a collection of Google Sheets. Each spr
 
 This project makes that data accessible to an LLM client—ChatGPT, in my case. The client sends requests to a Node.js MCP server, which reads the logbook through the Google Sheets API and returns the requested information.
 
+A concrete example of the resulting output is shown in [this image](img/results.png).
+
 <p align="center">
   <img src="img/architecture-overview.svg" alt="My Gym Stats MCP architecture and message flow" width="100%">
 </p>

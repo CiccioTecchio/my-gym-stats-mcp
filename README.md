@@ -17,14 +17,26 @@ This project makes that data accessible to an LLM client—ChatGPT, in my case. 
 | **Node.js**                      | Server runtime                                      |
 | **TypeScript**                   | Type-safe application code                          |
 | **Model Context Protocol (MCP)** | Communication between the LLM client and the server |
+| **Google Drive API**             | Restricted discovery of logbook files               |
 | **Google Sheets API**            | Access to workout data stored in Google Sheets      |
 | **JSON-RPC**                     | Message format used by MCP                          |
+
+## Configuration
+
+1. Enable the Google Drive API in your Google Cloud project.
+2. Configure [Application Default Credentials](https://cloud.google.com/docs/authentication/application-default-credentials). If you use a service account, share only the `logbook` folder with its email address.
+3. Copy `.env.example` to `.env` and set:
+   - `GOOGLE_APPLICATION_CREDENTIALS` to the absolute path of the credentials file.
+   - `GOOGLE_DRIVE_LOGBOOK_FOLDER_ID` to the ID from the `logbook` folder URL.
+
+The `list_logbook_files` tool accepts no path or folder ID. Starting from the configured `logbook` folder, it discovers only direct child folders named `YYYY` and lists only their direct Google Spreadsheet children. It uses the read-only Drive metadata scope.
 
 ## How to run
 
 ```bash
-npm use
+nvm use
 npm i
-npm run dev #runs the mcp server
-npm run inspector #runs the inspector, use it in a separated shell
+npm run build
+npm run dev # runs the MCP server
+npm run inspector # run in a separate shell
 ```

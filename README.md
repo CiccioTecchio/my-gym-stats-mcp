@@ -12,10 +12,19 @@ This project makes that data accessible to an LLM client—ChatGPT, in my case. 
 
 ## Tech Stack
 
-| Technology | Role |
-| --- | --- |
-| **Node.js** | Server runtime |
-| **TypeScript** | Type-safe application code |
+| Technology                       | Role                                                |
+| -------------------------------- | --------------------------------------------------- |
+| **Node.js**                      | Server runtime                                      |
+| **TypeScript**                   | Type-safe application code                          |
 | **Model Context Protocol (MCP)** | Communication between the LLM client and the server |
-| **Google Sheets API** | Access to workout data stored in Google Sheets |
-| **JSON-RPC** | Message format used by MCP |
+| **Google Sheets API**            | Access to workout data stored in Google Sheets      |
+| **JSON-RPC**                     | Message format used by MCP                          |
+
+## How to run
+
+```bash
+npm use
+npm i
+npm run dev #runs the mcp server
+npm run inspector #runs the inspector, use it in a separated shell
+```

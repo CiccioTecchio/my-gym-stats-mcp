@@ -1,0 +1,35 @@
+{
+  "name": "my-gym-stats-mcp",
+  "version": "1.0.0",
+  "description": "MCP Server linked to a Google Sheet repository. The server gives the tool for search and analyze the data inside the Google Sheets. The user can performe query over those data usign his own LLM client, in my case ChatGpt",
+  "keywords": [
+    "mcp",
+    "chatGpt",
+    "node.js",
+    "google-API",
+    "GoogleSheet"
+  ],
+  "license": "MIT",
+  "author": "CiccioTecchio",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "inspector": "npx @modelcontextprotocol/inspector node dist/index.js"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server": "^2.4.0",
+    "dotenv": "^18.0.10",
+    "zod": "^4.6.7"
+  }
+}
